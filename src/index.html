@@ -5,134 +5,127 @@
     <title>Hello World!</title>
     <link rel="stylesheet" href="index.css">
   </head>
-  <body>
-    <h1>每日任务</h1>
-    <form id="issue_form">
-      <p>项目代码: <input type="text" name="systemCode"/></p>
-      <p>issue 编号: <input type="text" name="issueNo" id=""/></p>
-      <p>issue 标题: <input type="text" name="issueTitle" id=""/></p>
-      <p>今日任务内容: <textarea name="taskContent" cols="30" rows="10"></textarea></p>
-      <p>是否已完成: 
-          <select name="finish">
-              <option value="1">是</option>
-              <option value="0">否</option>
-            </select>
-      </p>
-      <p>花费时间: <input type="text" name="spend"/> 小时</p>
-      <p>是否代码产出: 
-        <select name="createCode">
-          <option value="1">是</option>
-          <option value="0">否</option>
-        </select>
-      </p>
-      <button type="submit" id="btn">保存</button>
-    </form>
+  <body onload="changePage()">
+    <div id="login">
+      用户名: <input type="text" id="username"/>
+      <input type="button" value="确认" onclick="login()"/>
+    </div>
+    <div id="main" style="display: none;">
+      <h1>每日任务</h1>
+      <form id="issue_form">
+        <p>项目代码: <input type="text" name="systemCode"/></p>
+        <p>issue 编号: <input type="text" name="issueNo" id=""/></p>
+        <p>issue 标题: <input type="text" name="issueTitle" id=""/></p>
+        <p>今日任务内容: <textarea name="taskContent" cols="30" rows="10"></textarea></p>
+        <p>是否已完成: 
+            <select name="finish">
+                <option value="1">是</option>
+                <option value="0">否</option>
+              </select>
+        </p>
+        <p>花费时间: <input type="text" name="spend"/> 小时</p>
+        <p>是否代码产出: 
+          <select name="createCode">
+            <option value="1">是</option>
+            <option value="0">否</option>
+          </select>
+        </p>
+        <button type="submit" id="btn">保存</button>
+        <button type="reset" id="resetBtn">重置</button>
+      </form>
 
-    <br>
-    <br>
-    <br>
-    <h3>任务内容</h3>
-    <table>
-      <tbody id="issue-tab">
-      </tbody>
-    </table>
-    <button onclick="sendIssueEmail()">发送邮件</button>
+      <br>
+      <br>
+      <br>
+      <h3>任务内容</h3>
+      <table id="issue-tab">
+        <thead id="issue-tab-head">
+          <tr>
+            <th>项目代码</th>
+            <th>issue 编号</th>
+            <th>issue 标题</th>
+            <th>今日任务内容</th>
+            <th>是否已完成</th>
+            <th>花费时间</th>
+            <th>是否代码产出</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="issue-tab-body">
+        </tbody>
+      </table>
+      <button onclick="sendIssueEmail()">发送邮件</button>
+    </div>
 
+    <script src="./formUtil.js"></script>
+    <script src="./emailUtil.js"></script>
     <script>
-      const nodemailer = require("nodemailer");
-      let issueResult = {}
+      const {dialog} = require("electron").remote
+      let issueRecord = {}
+
+      function login() {
+        const username = document.getElementById('username').value
+        localStorage.setItem('username', username)
+        changePage()
+      }
+
+      function changePage() {
+        if(!!localStorage.getItem('username')) {
+          document.getElementById('main').style.display = 'block'
+          document.getElementById('login').style.display = 'none'
+        }
+      }
 
       function sendIssueEmail() {
-        sendEmail(document.getElementById('issue-tab').innerHTML)
-      }
-      
-      async function sendEmail(emailContent) {
-        "use strict";
-        console.log('send email start')
-      
-        // create reusable transporter object using the default SMTP transport
-        let transporter = nodemailer.createTransport({
-          host: "smtp.qq.com",
-          port: 587,
-          secure: false, // true for 465, false for other ports
-          auth: {
-            user: 'username', // generated ethereal user
-            pass: 'password' // generated ethereal password
-          }
-        });
-      
-        // send mail with defined transport object
-        let info = await transporter.sendMail({
-          from: ' "nick" <email-addr@qq.com>', // sender address
-          to: "email-addr@163.com", // list of receivers
-          subject: "Hello ✔", // Subject line
-          // text: emailContent, // plain text body
-          html: '<table>' + emailContent + '</table>' // html body
-        });
-      
-        console.log("Message sent: %s", info.messageId);
-        // Message sent: <b658f8ca-6296-ccf4-8306-87d57a0b4321@example.com>
-      
-        // Preview only available when sending through an Ethereal account
-        console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
-        // Preview URL: https://ethereal.email/message/WaQKMgKddxQDoou...
-      }
-
-      function setOrPush(target, val) {
-        var result = val;
-        if (target) {
-          result = [target];
-          result.push(val);
+        if(Object.keys(issueRecord).length < 1) {
+          dialog.showMessageBox({
+            title: '每日任务',
+            type: 'warning',
+            buttons: [],
+            message: '请填写任务内容<input type="text"/>'
+          })
+          return
         }
-        return result;
-      }
 
-      function getFormResults(formElement) {
-        var formElements = formElement.elements;
-        var formParams = {};
-        var i = 0;
-        var elem = null;
-        for (i = 0; i < formElements.length; i += 1) {
-          elem = formElements[i];
-          switch (elem.type) {
-            case 'submit':
-              break;
-            case 'radio':
-              if (elem.checked) {
-                formParams[elem.name] = elem.value;
-              }
-              break;
-            case 'checkbox':
-              if (elem.checked) {
-                formParams[elem.name] = setOrPush(formParams[elem.name], elem.value);
-              }
-              break;
-            default:
-              formParams[elem.name] = setOrPush(formParams[elem.name], elem.value);
-          }
+
+        const tabHead = '<thead>' + document.getElementById('issue-tab-head').innerHTML.replace('<th>操作</th>', '') + '</thead>'
+        let emailContent = []
+        for(let key in issueRecord) {
+          emailContent.push('<tr>' + generateTabItem(issueRecord[key]) + '</tr>')
         }
-        return formParams;
-      }
 
+        sendEmail(localStorage.getItem('username'), '<table>' + tabHead + '<tbody>' + emailContent + '</tbody></table>')
+      }
+      
       function generateTabItem(itemContent) {
         let itemHTML = [];
         itemHTML.push('<td>' + itemContent.systemCode + '</td>')
         itemHTML.push('<td>' + itemContent.issueNo + '</td>')
         itemHTML.push('<td>' + itemContent.issueTitle + '</td>')
         itemHTML.push('<td>' + itemContent.taskContent + '</td>')
-        itemHTML.push('<td>' + itemContent.finish + '</td>')
+        itemHTML.push('<td>' + (itemContent.finish == '1' ? '是' : '否') + '</td>')
         itemHTML.push('<td>' + itemContent.spend + '</td>')
-        itemHTML.push('<td>' + itemContent.createCode + '</td>')
+        itemHTML.push('<td>' + (itemContent.createCode == '1' ? '是' : '否') + '</td>')
 
         return itemHTML.join('')
       }
 
       function saveTask() {
         var formContent = getFormResults(document.getElementById('issue_form'));
-        issueResult[formContent.systemCode + formContent.issueNo] = formContent
+        const issueId = formContent.systemCode + '_' + formContent.issueNo
+        issueRecord[issueId] = formContent
+
         let tabItem = document.createElement('tr')
-        tabItem.innerHTML = generateTabItem(formContent)
-        document.getElementById('issue-tab').append(tabItem)
+        tabItem.id = issueId
+        let itemBtn = '<td><input type="button" value="删除" onclick="deleteRow(this)"/></td>'
+        tabItem.innerHTML = generateTabItem(formContent) + itemBtn
+        document.getElementById('issue-tab-body').append(tabItem)
+      }
+
+      function deleteRow(tabItemBtn) {
+        let itemTr = tabItemBtn.parentNode.parentNode
+        document.getElementById('issue-tab').deleteRow(itemTr.rowIndex)
+        delete issueRecord[itemTr.id]
       }
 
       (function() {
@@ -140,6 +133,7 @@
         issueForm.addEventListener('submit', function(event) {
           event.preventDefault();
           saveTask();
+          document.forms['issue_form'].reset()
         }, false);
       })();
     </script>
